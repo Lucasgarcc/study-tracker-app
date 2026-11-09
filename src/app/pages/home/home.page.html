@@ -4,7 +4,7 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true" class="ion-padding" style="--background: var(--orbit-bg-effect);">
+<ion-content [fullscreen]="true" class="ion-padding home-content">
   <ion-header collapse="condense" class="ion-no-border">
     <ion-toolbar>
       <ion-title size="large">Orbit Hub</ion-title>
@@ -25,40 +25,41 @@
 
     <!-- Mantenha o conteúdo atual do card -->
         <div class="orbit-grid">
-            <div *ngFor="let topic of activeTopics$ | async"
-                role="link"
-                tabindex="0"
-                (click)="openTopicDetail(topic.id)"
-                (keydown.enter)="openTopicDetail(topic.id)"
-                class="orbit-gadget-card" 
-            >
-          
-                <div>
+            @for (topic of activeTopics$ | async; track topic.id) {
 
-                    <!-- Ícone / Logo do Tópico com Glow interno -->
-                    <div class="gadget-icon-wrapper">
-                    <ion-icon [name]="getCategoryIcon(topic.category)" class="gadget-icon"></ion-icon>
-                    </div>
+                <div 
+                    role="link"
+                    tabindex="0"
+                    (click)="openTopicDetail(topic.id)"
+                    (keydown.enter)="openTopicDetail(topic.id)"
+                    class="orbit-gadget-card" 
+                >
+            
+                    <div>
 
-                    <!-- Informações do Tópico -->
-                    <div class="gadget-info">
-                    <span class="gadget-category">{{ topic.category }}</span>
-                    <h3 class="gadget-title">{{ topic.title }}</h3>
-                    </div>
+                        <!-- Ícone / Logo do Tópico com Glow interno -->
+                        <div class="gadget-icon-wrapper">
+                        <ion-icon [name]="getCategoryIcon(topic.category)" class="gadget-icon"></ion-icon>
+                        </div>
 
-                    <!-- Progresso em Barra Minimalista -->
-                    <div class="gadget-footer">
-                    <div class="progress-bar-bg">
-                        <div class="progress-bar-fill" [style.width.%]="topic.progress"></div>
-                    </div>
-                    <span class="progress-text">{{ topic.progress }}%</span>
-                    </div>
+                        <!-- Informações do Tópico -->
+                        <div class="gadget-info">
+                        <span class="gadget-category">{{ topic.category }}</span>
+                        <h3 class="gadget-title">{{ topic.title }}</h3>
+                        </div>
 
+                        <!-- Progresso em Barra Minimalista -->
+                        <div class="gadget-footer">
+                        <div class="progress-bar-bg">
+                            <div class="progress-bar-fill" [style.width.%]="topic.progress"></div>
+                        </div>
+                        <span class="progress-text">{{ topic.progress }}%</span>
+                        </div>
+
+                    </div>
                 </div>
-            </div>
+
+            }
         </div>
-   
-
-
-  </div>
+    </div>
 </ion-content>
