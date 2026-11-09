@@ -1,3 +1,73 @@
+.studies-content {
+    --background: var(--orbit-bg-effect);
+}
+
+.studies-container {
+    max-width: 600px;
+    margin: 0 auto;
+    padding-bottom: 48px;
+}
+
+.topic-form-card {
+    margin-bottom: 32px;
+    padding: 24px;
+    border-radius: 20px;
+    background: var(--orbit-card-bg) !important;
+    box-shadow: var(--orbit-shadow-2);
+}
+
+.form-header {
+    margin-bottom: 24px;
+}
+
+.form-eyebrow {
+    margin-bottom: 6px;
+    color: var(--orbit-accent);
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+}
+
+.form-title {
+    margin: 0;
+    color: var(--orbit-text-main);
+    font-size: 1.35rem;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+}
+
+.topic-input,
+.category-input {
+    border-radius: 14px;
+}
+
+.topic-input {
+    margin-bottom: 16px;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 8px;
+    --padding-bottom: 8px;
+}
+
+.category-input {
+    margin-bottom: 24px;
+    --padding-start: 12px;
+    --padding-end: 0;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
+}
+
+.submit-icon {
+    margin-right: 8px;
+    font-size: 20px;
+}
+
+.topics-list {
+    padding: 0;
+    background: transparent;
+}
+
 .topic-submit-button {
     --background: linear-gradient(135deg, var(--orbit-button-start), var(--orbit-button-end, var(--orbit-accent)));
     --color: #ffffff;
@@ -13,6 +83,13 @@
     --background: var(--orbit-topic-card-bg);
     --color: var(--orbit-text-main);
     color: var(--orbit-text-main);
+    margin-bottom: 12px;
+    border-radius: 14px;
+    background: var(--orbit-topic-card-bg) !important;
+    --padding-start: 16px;
+    --padding-end: 16px;
+    --padding-top: 12px;
+    --padding-bottom: 12px;
 
     ion-label {
         color: var(--orbit-text-main);
@@ -25,6 +102,26 @@
     p {
         color: var(--orbit-text-muted) !important;
     }
+}
+
+.topic-label {
+    margin: 6px 0;
+}
+
+.topic-title {
+    margin-bottom: 6px;
+    color: var(--orbit-text-main) !important;
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.2px;
+}
+
+.delete-topic-button {
+    margin-left: 8px;
+}
+
+.delete-topic-icon {
+    font-size: 20px;
 }
 
 .topic-metadata {
