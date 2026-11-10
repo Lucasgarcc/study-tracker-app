@@ -1,5 +1,6 @@
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
+import { Capacitor } from '@capacitor/core';
 import { catchError, map, Observable, throwError } from 'rxjs';
 import { Topic } from '../store/models/topic.model';
 
@@ -9,14 +10,17 @@ import { Topic } from '../store/models/topic.model';
 export class Topics {
   
     private readonly http = inject(HttpClient);
-    private readonly URL = 'http://localhost:3000/topics';
+    private readonly URL = `${
+        Capacitor.getPlatform() === 'ios'
+            ? 'http://192.168.1.229:3000'
+            : 'http://localhost:3000'
+    }/topics`;
 
     /**
      * 
      * @returns 
      */
     getTopics(): Observable<Topic[]> {
-
         return this.http.get<Topic[]>(this.URL)
         .pipe(
             map((topics: Topic[]) => topics || []),
@@ -42,6 +46,18 @@ export class Topics {
      */
     addTopic(topic: Omit<Topic, 'id'>): Observable<Topic> {
         return this.http.post<Topic>(this.URL, topic);
+    };
+
+    /**
+     * 
+     * @param topic 
+     * @returns 
+     */
+    updateTopic(id: string, changes: Partial<Topic>): Observable<Topic> {
+        return this.http.patch<Topic>(
+            `${this.URL}/${encodeURIComponent(id)}`,
+            changes
+        )
     };
 
     /**

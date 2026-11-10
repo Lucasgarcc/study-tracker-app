@@ -3,9 +3,7 @@
 }
 
 .studies-container {
-    max-width: 600px;
-    margin: 0 auto;
-    padding-bottom: 48px;
+    --orbit-content-max-width: 600px;
 }
 
 .topic-form-card {
@@ -116,13 +114,6 @@
     letter-spacing: -0.2px;
 }
 
-.delete-topic-button {
-    margin-left: 8px;
-}
-
-.delete-topic-icon {
-    font-size: 20px;
-}
 
 .topic-metadata {
     display: flex;

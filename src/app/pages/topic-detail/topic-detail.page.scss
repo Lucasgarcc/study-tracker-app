@@ -1,6 +1,91 @@
+.topic-detail-content {
+  --background: var(--orbit-bg-effect);
+}
+
+.topic-detail-header ion-toolbar {
+  --background: transparent;
+  --border-width: 0;
+}
+
 .topic-back-button {
   --color: var(--orbit-chrome-text);
   --icon-font-size: 26px;
   --min-width: 48px;
   --min-height: 48px;
 }
+
+.topic-detail-container {
+  --orbit-content-max-width: 600px;
+}
+
+.topic-hero {
+  margin-bottom: 28px;
+  padding: 24px;
+  border: 1px solid var(--orbit-card-border);
+  border-radius: 20px;
+  background: var(--orbit-card-bg);
+  box-shadow: var(--orbit-shadow-1);
+}
+
+.topic-eyebrow {
+  margin-bottom: 8px;
+  color: var(--orbit-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.topic-title {
+  margin: 0;
+  color: var(--orbit-text-main);
+  font-size: clamp(1.8rem, 7vw, 2.6rem);
+  font-weight: 700;
+  letter-spacing: -1px;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.topic-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 20px;
+}
+
+.topic-category {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 4px 12px;
+  border: 1px solid var(--orbit-card-border);
+  border-radius: 999px;
+  background: var(--orbit-bg-surface-variant);
+  color: var(--orbit-primary);
+  font-size: var(--orbit-text-xs);
+  font-weight: 700;
+}
+
+.topic-progress-label {
+  color: var(--orbit-text-muted);
+  font-size: var(--orbit-text-sm);
+  font-weight: 600;
+}
+
+.topic-progress-bar {
+  height: 8px;
+  margin-top: 20px;
+  --background: var(--orbit-bg-surface-variant);
+  --progress-background: var(--orbit-accent);
+  --border-radius: 999px;
+}
+
+.topic-empty-state {
+  display: grid;
+  min-height: 240px;
+  place-items: center;
+  color: var(--orbit-text-muted);
+  text-align: center;
+}
+

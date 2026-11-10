@@ -59,7 +59,8 @@ export class StudiesPage implements OnInit {
                     totalTasks: this.totalTasks,
                     lastStudied: this.lastStudied.toISOString(),
                     badgeColor: this.badgeColor,
-                    progress: 0
+                    progress: 0,
+                    tasks: []
                 }
             })
         );

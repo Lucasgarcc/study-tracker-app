@@ -1,25 +1,80 @@
-<ion-header [translucent]="true" class="ion-no-border">
-    <ion-toolbar>
-      <ion-title class="ion-padding-start">{{ task.title }}</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<section class="study-task-container">
+    <div class="task-heading">
+        <div class="task-heading-icon">
+        <ion-icon name="checkmark-done-outline"></ion-icon>
+        </div>
+
+        <div>
+        <div class="task-eyebrow">Organização</div>
+        <h2 class="task-heading-title">Tarefas de estudo</h2>
+        </div>
+    </div>
+
+    @if (tasks$ | async; as tasks) {
+        <ion-list lines="none" class="tasks-list">
+            @if (tasks.length > 0) {
+                <ion-reorder-group
+                    [disabled]="false"
+                    (ionItemReorder)="onReorder($event)">
+                    @for (task of tasks; track task.id) {
+                        <ion-item class="task-row" lines="none">
+                            <ion-checkbox
+                                slot="start"
+                                [checked]="task.completed"
+                                (ionChange)="toggleTask(task.id)"
+                                [attr.aria-label]="'Concluir tarefa: ' + task.title">
+                            </ion-checkbox>
+
+                            <ion-label class="task-label">
+                                <span
+                                    class="task-title"
+                                    [class.task-completed]="task.completed">
+                                    {{ task.title }}
+                                </span>
+                            </ion-label>
+
+                            <ion-reorder slot="end"></ion-reorder>
+
+                            <ion-button fill="clear" color="primary" slot="end" 
+                                (click)="$event.stopPropagation(); deleteTask(task.id)" 
+                                aria-label="Remover Tarefa" class="delete-button">
+                                <ion-icon name="remove-circle-outline" slot="icon-only" class="delete-icon"></ion-icon>
+                            </ion-button>
+
+                        </ion-item>
+                    }
+                </ion-reorder-group>
+            } @else {
+                <div class="empty-state">
+                    <ion-icon name="list-outline"></ion-icon>
+                    <span>Nenhuma tarefa adicionada ainda.</span>
+                </div>
+            }
+        </ion-list>
+
+        <ion-item class="new-task-row" lines="none">
+                <ion-icon
+                    name="add-outline"
+                    slot="start"
+                    class="new-task-icon">
+                </ion-icon>
+
+                <ion-input
+                    #titleInput
+                    placeholder="Nova tarefa"
+                    aria-label="Título da nova tarefa">
+                </ion-input>
+
+                <ion-button
+                    fill="clear"
+                    class="new-task-button"
+                    aria-label="Adicionar tarefa"
+                    (click)="addNewTask(titleInput.value ?? '', tasks)"
+                    (keyup.enter)="addNewTask(titleInput.value ?? '', tasks)">
+                    Adicionar
+                </ion-button>
+        </ion-item>
+    }
   
-  <ion-content [fullscreen]="true" class="ion-padding study-task-content">
-    <ion-header collapse="condense" class="ion-no-border">
-      <ion-toolbar>
-        <ion-title size="large">{{ task.title}}</ion-title>
-      </ion-toolbar>
-    </ion-header>
-  
-    <!-- Container Geral com espaçamento Apple (max-width e respiros) -->
-    <ion-item lines="none">
-        <ion-checkbox
-          slot="start"
-          [checked]="task.completed"
-          [attr.aria-label]="'Concluir tarefa: ' + task.title">
-        </ion-checkbox>
-      
-        <ion-label>{{ task.title }}</ion-label>
-      </ion-item>
-  </ion-content>
-  
+</section>
+

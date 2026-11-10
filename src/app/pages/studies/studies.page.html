@@ -12,7 +12,7 @@
   </ion-header>
 
   <!-- Container principal centralizado (Padrão Apple Human Interface Guidelines) -->
-  <div class="studies-container">
+  <div class="studies-container orbit-content-container">
 
     <!-- Seção: Formulário para Adicionar Novo Tópico -->
     <ion-card class="orbit-card topic-form-card">
@@ -91,8 +91,8 @@
                         </div>
                     </ion-label>
                     
-                    <ion-button fill="clear" color="primary" slot="end" (click)="$event.stopPropagation(); deleteTopic(topic.id)" aria-label="Remover tópico" class="delete-topic-button">
-                        <ion-icon name="remove-circle-outline" slot="icon-only" class="delete-topic-icon"></ion-icon>
+                    <ion-button fill="clear" color="primary" slot="end" (click)="$event.stopPropagation(); deleteTopic(topic.id)" aria-label="Remover tópico" class="delete-button">
+                        <ion-icon name="remove-circle-outline" slot="icon-only" class="delete-icon"></ion-icon>
                     </ion-button>
                 </ion-item>
 

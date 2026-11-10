@@ -24,7 +24,8 @@ export class TopicsEffects {
                         TopicsActions.loadTopicsSuccess({ topics})
                     ),
                     catchError(() => 
-                        of(TopicsActions.loadTopicsFailure ({
+                        of(
+                            TopicsActions.loadTopicsFailure ({
                             error: 'Não foi possível carregar os tópicos.'
                         }))
                     )
@@ -34,19 +35,42 @@ export class TopicsEffects {
     );
 
     /**
-     * effect of add
+     * effect of update
      */
     readonly addTopics$ = createEffect(() =>
         this.actions$.pipe(
             ofType(TopicsActions.addTopic),
             concatMap(({ topic }) =>
                 this.topicsServices.addTopic(topic).pipe(
-                    map(creatTopic => 
-                        TopicsActions.addTopicSuccess({ topic: creatTopic})
+                    map(createTopic => 
+                        TopicsActions.addTopicSuccess({ topic: createTopic})
                     ),
                     catchError(() => 
-                        of(TopicsActions.addTopicFailure({
+                        of(
+                            TopicsActions.addTopicFailure({
                             error: 'Não foi possível adicionar o tópico.'
+                        }))
+                    )
+                )
+            )
+        )
+    );
+
+    /**
+     * effect of add
+     */
+    readonly updateTopics$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(TopicsActions.updateTopic),
+            concatMap(({ topic }) =>
+                this.topicsServices.updateTopic(topic.id, {tasks: topic.tasks}).pipe(
+                    map(updateTopics =>
+                        TopicsActions.updateTopicSuccess({ topic: updateTopics })
+                    ),
+                    catchError(() =>
+                        of(
+                            TopicsActions.updateTopicFailure({
+                            error: 'Não foi possível atualizar o tópico.'
                         }))
                     )
                 )
