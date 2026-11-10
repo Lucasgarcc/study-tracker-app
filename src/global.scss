@@ -112,6 +112,15 @@ ion-content {
     color: var(--orbit-text-main);
 }
 
+/* Container padrão para manter largura e espaçamento consistentes nas páginas. */
+.orbit-content-container {
+    max-width: var(--orbit-content-max-width);
+    margin: 0 auto;
+    padding: var(--orbit-content-padding-block-start, var(--orbit-space-6))
+        var(--orbit-content-padding-inline, var(--orbit-space-4))
+        var(--orbit-content-padding-block-end, var(--orbit-space-8));
+}
+
 ion-content::part(scroll) {
     scrollbar-width: none;
     -ms-overflow-style: none;
@@ -197,6 +206,14 @@ ion-select:focus-within {
     &::part(icon) {
         color: var(--orbit-text-main);
     }
+}
+
+.delete-button {
+    margin-left: 8px;
+}
+
+.delete-icon {
+    font-size: 20px;
 }
 
 @media (hover: hover) {

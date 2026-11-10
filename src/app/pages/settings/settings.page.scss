@@ -16,9 +16,9 @@ ion-content { --background: var(--orbit-bg-effect); }
     --settings-text-md: calc(var(--orbit-text-md) * var(--settings-font-scale));
     --settings-text-lg: calc(var(--orbit-text-lg) * var(--settings-font-scale));
     --settings-text-xl: calc(var(--orbit-text-xl) * var(--settings-font-scale));
-    max-width: var(--orbit-content-max-width);
-    margin: 0 auto;
-    padding: var(--orbit-space-8) var(--orbit-space-5) calc(var(--orbit-space-8) * 2);
+    --orbit-content-padding-block-start: var(--orbit-space-8);
+    --orbit-content-padding-inline: var(--orbit-space-5);
+    --orbit-content-padding-block-end: calc(var(--orbit-space-8) * 2);
 }
 
 .settings-intro {
