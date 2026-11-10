@@ -14,6 +14,10 @@ export const TopicsActions = createActionGroup({
         'Add Topic Success': props<{ topic: Topic }>(),
         'Add Topic Failure': props<{ error: string }>(),
 
+        'Update Topic': props<{ topic: Topic }>(),
+        'Update Topic Success': props<{ topic: Topic }>(),
+        'Update Topic Failure': props<{ error: string }>(),
+
         'Delete Topic Success': props<{ id: string }>(),
         'Delete Topic Failure': props<{ error: string }>(),
 

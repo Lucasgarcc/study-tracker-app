@@ -1,24 +1,52 @@
 <ion-header class="topic-detail-header">
-    <ion-toolbar>
-      <ion-buttons slot="start">
-        <ion-back-button
-          class="topic-back-button"
-          defaultHref="/tabs/home"
-          icon="chevron-back-outline"
-          text=""
-          aria-label="Voltar para os tópicos">
-        </ion-back-button>
-      </ion-buttons>
-      <ion-title>Detalhes do tópico</ion-title>
-    </ion-toolbar>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        class="topic-back-button"
+        defaultHref="/tabs/home"
+        icon="chevron-back-outline"
+        text=""
+        aria-label="Voltar para os tópicos">
+      </ion-back-button>
+    </ion-buttons>
+
+    <ion-title>Detalhes do tópico</ion-title>
+  </ion-toolbar>
 </ion-header>
 
-<ion-content class="ion-padding">
-    @if (topic$ | async; as topic) {
-        <h1>{{ topic.title }}</h1>
-        <p>{{ topic.category }}</p>
-        <p>Progresso: {{ topic.progress }}%</p>
-    } @else {
-        <p>Tópico não encontrado.</p>
-    }
+<ion-content class="topic-detail-content">
+  @if (topic$ | async; as topic) {
+    <div class="topic-detail-container orbit-content-container">
+      <section class="topic-hero">
+        <div class="topic-eyebrow">Módulo de estudo</div>
+
+        <h1 class="topic-title">
+          {{ topic.title }}
+        </h1>
+
+        <div class="topic-meta">
+          <span class="topic-category">
+            {{ topic.category }}
+          </span>
+
+          <span class="topic-progress-label">
+            {{ topic.progress }}% concluído
+          </span>
+        </div>
+
+        <ion-progress-bar
+          class="topic-progress-bar"
+          [value]="topic.progress / 100"
+          aria-label="Progresso do tópico">
+        </ion-progress-bar>
+      </section>
+
+      <app-study-task [topicID]="topic.id"></app-study-task>
+    </div>
+  } @else {
+    <div class="topic-empty-state">
+      <p>Tópico não encontrado.</p>
+    </div>
+  }
 </ion-content>
+

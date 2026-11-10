@@ -1,0 +1,50 @@
+import { inject, Injectable } from "@angular/core";
+import { Actions, createEffect, ofType } from "@ngrx/effects";
+import { catchError, concatMap, of, take } from "rxjs";
+import { Topics } from "src/app/services/topics";
+import { TasksActions } from "./tasks.actions";
+import { Store } from '@ngrx/store';
+import { selectTopicById } from "../topics/topics.selectors";
+import { TopicsActions } from "../topics/topics.actions";
+@Injectable()
+export class TaskEffects {
+
+    private readonly actions$ = inject(Actions);
+    private readonly topicsService = inject(Topics);
+    private readonly store = inject(Store);
+
+    readonly addTask$ = createEffect(() =>
+
+        this.actions$.pipe(
+            ofType(TasksActions.addTask),
+
+            // Read the topic when this request starts, after earlier saves finish.
+            concatMap(({ task }) => this.store.select(selectTopicById(task.topicID)).pipe(
+                take(1),
+
+                concatMap(topic => {
+                    if (!topic) {
+                        return of(TasksActions.addTaskFailure({
+                            taskId: task.id,
+                            error: 'Tópico não encontrado'
+                        }));
+                    }
+
+                    const updatedTasks = [...(topic.tasks ?? []), task];
+
+                    return this.topicsService.updateTopic(topic.id, { tasks: updatedTasks }).pipe(
+                        concatMap(updatedTopic => of(
+                            TopicsActions.updateTopicSuccess({ topic: updatedTopic }),
+                            TasksActions.addTaskSuccess({ task })
+                        )),
+                        catchError(() => of(TasksActions.addTaskFailure({
+                            taskId: task.id,
+                            error: 'Não foi possível salvar a tarefa.'
+                        })))
+                    );
+                })
+            ))
+        )
+    );
+}
+

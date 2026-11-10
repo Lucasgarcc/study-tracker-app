@@ -30,6 +30,19 @@ export const topicsReducer = createReducer(
     })),
 
     /**
+     * action add  topic 
+     */
+    on(TopicsActions.updateTopicSuccess, (state, { topic }) => ({
+        ...state,
+        topics: state.topics.map(currentTopic => 
+            currentTopic.id === topic.id 
+             ? topic
+             : currentTopic
+        ),
+        error: null
+    })),
+
+    /**
      * action detete topic
      */
     on(TopicsActions.deleteTopicSuccess, (state, { id }) => ({
@@ -50,6 +63,14 @@ export const topicsReducer = createReducer(
     on(TopicsActions.addTopic, 
         TopicsActions.deleteTopic,
         state => ({ ...state, error: null })
+    ),
+
+    on(
+        TopicsActions.updateTopicFailure,
+        (state, { error }) => ({
+            ...state,
+            error
+        })
     ),
 
     on(TopicsActions.loadTopics, state => ({

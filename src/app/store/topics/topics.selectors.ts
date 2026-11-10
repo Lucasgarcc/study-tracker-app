@@ -15,3 +15,13 @@ export const selectActiveTopics = createSelector(
   selectAllTopics,
   (topics) => topics.filter(t => t.progress < 100)
 );
+
+/**
+ * 
+ * @param id 
+ * @returns 
+ */
+export const selectTopicById = (id: string) => createSelector(
+    selectAllTopics,
+    topics => topics.find(topic => topic.id === id)
+);
