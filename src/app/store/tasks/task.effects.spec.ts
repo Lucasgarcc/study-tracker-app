@@ -98,6 +98,44 @@ describe('Task persistence', () => {
         expect((await firstValueFrom(store.select(selectTaskState))).error).toBeNull();
     });
 
+    it('updates the visible task list after deletion without reloading and preserves the topic', async () => {
+        // A task ID may match its topic ID; deleting it must not delete the topic.
+        const deletedTask = task(topic.id, 1);
+        store.dispatch(TopicsActions.loadTopicsSuccess({
+            topics: [{ ...topic, tasks: [existingTask, deletedTask] }]
+        }));
+
+        store.dispatch(TasksActions.deleteTask({ id: deletedTask.id }));
+        expect(service.updateTopic.calls.mostRecent().args)
+            .toEqual([topic.id, { tasks: [existingTask] }]);
+
+        responses[0].next({ ...topic, tasks: [existingTask] });
+        responses[0].complete();
+
+        expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
+            .toEqual([existingTask]);
+        expect((await firstValueFrom(store.select(selectTopicById(topic.id))))?.tasks)
+            .toEqual([existingTask]);
+        expect((await firstValueFrom(store.select(selectTaskState))).error).toBeNull();
+    });
+
+    it('keeps the task visible when deletion fails and allows a retry', async () => {
+        store.dispatch(TasksActions.deleteTask({ id: existingTask.id }));
+        responses[0].error(new Error('Network failure'));
+
+        expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
+            .toEqual([existingTask]);
+        expect((await firstValueFrom(store.select(selectTaskState))).error).toBeTruthy();
+
+        store.dispatch(TasksActions.deleteTask({ id: existingTask.id }));
+        responses[1].next({ ...topic, tasks: [] });
+        responses[1].complete();
+
+        expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
+            .toEqual([]);
+        expect((await firstValueFrom(store.select(selectTaskState))).error).toBeNull();
+    });
+
     it('removes an addition when its topic does not exist', async () => {
         const missing = { ...task('missing', 0), topicID: 'missing-topic' };
         store.dispatch(TasksActions.addTask({ task: missing }));

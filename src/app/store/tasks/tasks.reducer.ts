@@ -67,9 +67,8 @@ export const TasksReducers = createReducer(
     /**
      * action delete task
      */
-    on(TasksActions.deleteTask, (state, { id }) => ({
+    on(TasksActions.deleteTask, state => ({
         ...state,
-        tasks: state.tasks.filter(task => task.id !== id),
         error: null
     })),
 
@@ -112,9 +111,19 @@ export const TasksReducers = createReducer(
     /**
      * Status
      */
-    on(TasksActions.addTaskSuccess, 
-        TasksActions.deleteTaskSuccess,
+    on(TasksActions.addTaskSuccess,
         state => ({ ...state, error: null })
     ),
+
+    on(TasksActions.deleteTaskSuccess, (state, { id }) => ({
+        ...state,
+        tasks: state.tasks.filter(task => task.id !== id),
+        error: null
+    })),
+
+    on(TasksActions.deleteTaskFailure, (state, { error }) => ({
+        ...state,
+        error
+    }))
     
 )
