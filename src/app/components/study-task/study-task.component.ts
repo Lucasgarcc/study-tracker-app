@@ -1,6 +1,6 @@
 import { IonicModule, IonInput } from '@ionic/angular';
 import { Component, inject, Input, OnChanges, SimpleChanges, ViewChild } from '@angular/core';
-import { StudyTask } from 'src/app/store/models/study-task.model';
+import { StudyTask, TaskEditableFields } from 'src/app/store/models/study-task.model';
 import { Store } from '@ngrx/store';
 import { AsyncPipe } from '@angular/common';
 import { Observable } from 'rxjs';
@@ -20,16 +20,23 @@ export class StudyTaskComponent implements OnChanges {
     @ViewChild('titleInput') titleInput!: IonInput;
 
     tasks$!: Observable<StudyTask[]>;
+    editingTaskId: string | null = null;
+    taskDraft: TaskEditableFields | null = null;
+    taskTitleError = false;
+    openedTaskActionsId: string | null = null;
     private readonly store = inject(Store);
 
     /**
-     * Atualiza o selector das tasks quando o tópico recebido pelo componente
-     * é definido ou alterado.
-     *
-     * @param changes alterações detectadas nos inputs do componente
+     * Reinicia a edição e os controles ao receber um tópico, evitando que o
+     * estado visual do tópico anterior seja aplicado à nova lista.
+     * O template consome a lista pelo AsyncPipe, que gerencia a inscrição.
      */
     ngOnChanges(changes: SimpleChanges): void {
         if (changes['topicID'] && this.topicID) {
+            this.editingTaskId = null;
+            this.taskDraft = null;
+            this.taskTitleError = false;
+            this.openedTaskActionsId = null;
             this.tasks$ = this.store.select(
                 selectTaskByTopicId(this.topicID)
             )
@@ -37,9 +44,8 @@ export class StudyTaskComponent implements OnChanges {
     }
 
     /**
-     * Cria uma nova task vinculada ao tópico atual e a adiciona ao store.
-     * O título é normalizado antes do cadastro e o campo de input é limpo
-     * depois que a task é adicionada.
+     * Solicita a adição ao tópico atual, ignorando títulos vazios.
+     * Limpa o input após o dispatch; isso não representa confirmação da API.
      *
      * @param value valor informado no campo de título
      * @param tasks tasks atuais do tópico, usadas para definir a posição inicial
@@ -55,7 +61,7 @@ export class StudyTaskComponent implements OnChanges {
             id: this.generationIdTask(),
             topicID: this.topicID,
             title,
-            text: '',
+            description: '',
             completed: false,
             position: tasks.length
         };
@@ -68,18 +74,114 @@ export class StudyTaskComponent implements OnChanges {
     }
 
     /**
-     * Remove uma task do store usando o seu identificador.
-     *
-     * @param id identificador da task que será removida
+     * Solicita a exclusão pelo ID. O effect coordena a chamada à API;
+     * o componente não executa a requisição diretamente.
      */
     deleteTask(id: string) {
         this.store.dispatch(TasksActions.deleteTask({ id }))
     }
 
     /**
-     * Alterna o status de conclusão da task selecionada.
+     * Mantém as ações abertas para uma única tarefa.
+     * Clicar novamente na mesma tarefa fecha os controles.
+     */
+    toggleTaskActions(id: string) {
+       this.openedTaskActionsId = 
+       this.openedTaskActionsId === id ? null : id;
+    }
+
+    /**
+     * Fecha os controles por Escape e devolve o foco ao botão que os abre,
+     * evitando que o foco permaneça em uma ação que ficará oculta.
+     */
+    closeTaskActions(event: Event, toggle: HTMLButtonElement): void {
+        if (this.openedTaskActionsId === null) return;
+
+        event.stopPropagation();
+        this.openedTaskActionsId = null;
+        toggle.focus();
+    }
+
+    /**
+     * Copia os campos editáveis para um rascunho separado da tarefa na Store.
+     * Ao passar entre título e descrição da mesma tarefa, mantém o rascunho
+     * existente para não substituir o texto que já foi digitado.
+     */
+    startTaskEditing(task: StudyTask): void {
+        if (this.editingTaskId === task.id) return;
+
+        this.editingTaskId = task.id;
+        this.taskDraft = { title: task.title, description: task.description ?? '' };
+        this.taskTitleError = false;
+    }
+
+    /**
+     * Inicia a edição pelo título, selecionando seu conteúdo para substituição.
+     * Fecha as ações para liberar espaço aos campos durante a edição.
+     */
+    editTask(task: StudyTask, titleInput: HTMLInputElement): void {
+        this.startTaskEditing(task);
+        this.openedTaskActionsId = null;
+        titleInput.focus();
+        titleInput.select();
+    }
+
+    /**
+     * Atualiza somente o rascunho durante a digitação, sem disparar actions.
+     * A validação do título fornece feedback antes de finalizar a edição.
      *
-     * @param id identificador da task que terá o status alterado
+     * @param field campo editável que recebeu a alteração
+     * @param value conteúdo atual do campo, ainda sem normalização
+     */
+    updateTaskDraft(field: keyof TaskEditableFields, value: string): void {
+        if (!this.taskDraft) return;
+
+        this.taskDraft = { ...this.taskDraft, [field]: value };
+        if (field === 'title') this.taskTitleError = !value.trim();
+    }
+
+    /**
+     * Finaliza a edição quando o foco sai do conjunto título/descrição.
+     * A troca de foco entre esses campos não deve finalizar o rascunho.
+     *
+     * Mantém a edição ativa se o título estiver vazio. Com dados válidos,
+     * dispara updateTask apenas se houve mudança e limpa o estado de edição.
+     * A action atualiza a Store; a persistência HTTP da edição ainda não existe.
+     *
+     * @param event evento focusout do elemento que contém os dois campos
+     * @param task tarefa atual usada para comparar e preservar os demais campos
+     */
+    finishTaskEditing(event: FocusEvent, task: StudyTask): void {
+        const fields = event.currentTarget as HTMLElement;
+
+        if (event.relatedTarget instanceof Node && fields.contains(event.relatedTarget)) return;
+
+        if (this.editingTaskId !== task.id || !this.taskDraft) return;
+
+        const title = this.taskDraft.title.trim();
+
+        if (!title) {
+            this.taskTitleError = true;
+            return;
+        }
+
+        const description = this.taskDraft.description;
+
+        if (title !== task.title || description !== (task.description ?? '')) {
+            this.store.dispatch(TasksActions.updateTask({
+                task: { ...task, title, description }
+            }));
+        }
+
+        this.editingTaskId = null;
+        this.taskDraft = null;
+        this.taskTitleError = false;
+
+    }
+
+    /**
+     * Dispara a alternância de conclusão no estado local.
+     * A persistência HTTP dessa alteração ainda não está implementada.
      */
     toggleTask(id: string): void {
         this.store.dispatch(TasksActions.toggleTask({ id }));
@@ -87,11 +189,9 @@ export class StudyTaskComponent implements OnChanges {
 
 
     /**
-     * Reorganiza uma task dentro da lista do tópico atual.
-     * O Ionic informa as posições inicial e final, enquanto o reducer atualiza
-     * a propriedade position das tasks envolvidas.
-     *
-     * @param event evento emitido pelo ion-reorder-group
+     * Envia as posições do arraste ao reducer, que recalcula a ordem local.
+     * complete() encerra a interação visual do Ionic; não confirma persistência.
+     * A ordem ainda não é enviada à API.
      */
     onReorder(event: CustomEvent): void {
         const { from, to, complete } = event.detail;
@@ -108,15 +208,8 @@ export class StudyTaskComponent implements OnChanges {
     }
 
     /**
-     * 
-     * @returns 
-     */
-    /**
-     * Gera um identificador único para uma nova task.
-     * Usa crypto.randomUUID quando disponível e um fallback compatível com
-     * ambientes que não oferecem esse recurso, como alguns contextos mobile.
-     *
-     * @returns identificador da nova task
+     * Usa UUID quando disponível e um fallback baseado em tempo e aleatoriedade
+     * nos demais ambientes. O fallback não oferece a mesma garantia de um UUID.
      */
     private generationIdTask(): string {
         if (typeof crypto.randomUUID === 'function') {

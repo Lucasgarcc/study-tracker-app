@@ -17,7 +17,8 @@
                     [disabled]="false"
                     (ionItemReorder)="onReorder($event)">
                     @for (task of tasks; track task.id) {
-                        <ion-item class="task-row" lines="none">
+                      <div class="task-entry" [class.task-entry-actions-open]="openedTaskActionsId === task.id">
+                        <ion-item class="task-row" [class.task-row-actions-open]="openedTaskActionsId === task.id" [class.task-row-editing]="editingTaskId === task.id" lines="none">
                             <ion-checkbox
                                 slot="start"
                                 [checked]="task.completed"
@@ -25,23 +26,86 @@
                                 [attr.aria-label]="'Concluir tarefa: ' + task.title">
                             </ion-checkbox>
 
-                            <ion-label class="task-label">
-                                <span
+                            <div class="task-content">
+                              <div class="task-label" (focusout)="finishTaskEditing($event, task)">
+                                <input
+                                    #taskTitleInput
+                                    type="text"
                                     class="task-title"
-                                    [class.task-completed]="task.completed">
-                                    {{ task.title }}
-                                </span>
-                            </ion-label>
-
-                            <ion-reorder slot="end"></ion-reorder>
-
-                            <ion-button fill="clear" color="primary" slot="end" 
-                                (click)="$event.stopPropagation(); deleteTask(task.id)" 
-                                aria-label="Remover Tarefa" class="delete-button">
-                                <ion-icon name="remove-circle-outline" slot="icon-only" class="delete-icon"></ion-icon>
-                            </ion-button>
-
+                                    [title]="task.title"
+                                    [value]="editingTaskId === task.id ? taskDraft?.title : task.title"
+                                    [attr.aria-label]="'Título da tarefa: ' + task.title"
+                                    [attr.aria-invalid]="editingTaskId === task.id && taskTitleError"
+                                    [attr.aria-describedby]="editingTaskId === task.id && taskTitleError ? 'task-title-error-' + task.id : null"
+                                    [class.task-completed]="task.completed"
+                                    (focus)="startTaskEditing(task)"
+                                    (input)="updateTaskDraft('title', taskTitleInput.value)">
+                                <textarea
+                                    #descriptionInput
+                                    class="task-description"
+                                    rows="2"
+                                    placeholder="Adicionar descrição…"
+                                    [value]="editingTaskId === task.id ? taskDraft?.description : task.description"
+                                    [attr.aria-label]="'Descrição da tarefa: ' + task.title"
+                                    [class.task-completed]="task.completed"
+                                    (focus)="startTaskEditing(task)"
+                                    (input)="updateTaskDraft('description', descriptionInput.value)"></textarea>
+                                @if (editingTaskId === task.id && taskTitleError) {
+                                    <span class="task-field-error" [id]="'task-title-error-' + task.id" role="alert">Informe um título para a tarefa.</span>
+                                }
+                              </div>
+                            </div>
                         </ion-item>
+
+                            <div class="task-controls" (keydown.escape)="closeTaskActions($event, actionsToggle)">
+                              <button
+                                  #actionsToggle
+                                  type="button"
+                                  class="task-actions-toggle"
+                                  [class.task-actions-toggle-open]="openedTaskActionsId === task.id"
+                                  [attr.aria-label]="(openedTaskActionsId === task.id ? 'Ocultar ações de ' : 'Mostrar ações de ') + task.title"
+                                  [attr.aria-expanded]="openedTaskActionsId === task.id"
+                                  [attr.aria-controls]="'task-actions-' + task.id"
+                                  (click)="$event.stopPropagation(); toggleTaskActions(task.id)">
+                                  <ion-icon
+                                      [name]="openedTaskActionsId === task.id ? 'chevron-forward-outline' : 'ellipsis-horizontal-outline'"
+                                      aria-hidden="true">
+                                  </ion-icon>
+                              </button>
+                              <div
+                                  class="task-actions-reveal"
+                                  [id]="'task-actions-' + task.id"
+                                  [class.task-actions-reveal-open]="openedTaskActionsId === task.id"
+                                  [attr.inert]="openedTaskActionsId === task.id ? null : ''"
+                                  [attr.aria-hidden]="openedTaskActionsId !== task.id">
+                                <div class="task-actions-clip">
+                                <div class="task-actions" role="group" [attr.aria-label]="'Ações da tarefa: ' + task.title">
+                                    <ion-button
+                                        class="task-action-button"
+                                        fill="clear"
+                                        aria-label="Editar título e descrição da tarefa"
+                                        title="Editar tarefa"
+                                        (click)="$event.stopPropagation(); editTask(task, taskTitleInput)">
+                                        <ion-icon name="create-outline" slot="icon-only" aria-hidden="true"></ion-icon>
+                                    </ion-button>
+                                    <div class="task-reorder-control">
+                                        <ion-reorder aria-label="Arrastar para reorganizar tarefa" title="Arrastar para reorganizar">
+                                            <ion-icon name="reorder-three-outline" aria-hidden="true"></ion-icon>
+                                        </ion-reorder>
+                                    </div>
+                                    <ion-button
+                                        class="task-action-button task-action-delete"
+                                        fill="clear"
+                                        aria-label="Excluir tarefa"
+                                        title="Excluir tarefa"
+                                        (click)="$event.stopPropagation(); deleteTask(task.id)">
+                                        <ion-icon name="remove-circle-outline" slot="icon-only" aria-hidden="true"></ion-icon>
+                                    </ion-button>
+                                </div>
+                                </div>
+                              </div>
+                            </div>
+                        </div>
                     }
                 </ion-reorder-group>
             } @else {

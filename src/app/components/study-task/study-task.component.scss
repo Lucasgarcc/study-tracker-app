@@ -45,7 +45,18 @@
   background: transparent;
 }
 
+.task-entry {
+  position: relative;
+  isolation: isolate;
+}
+
+.task-entry-actions-open {
+  z-index: 2;
+}
+
 .task-row {
+  position: relative;
+  z-index: 0;
   min-height: 48px;
   margin-bottom: 2px;
   border-bottom: 1px solid var(--orbit-card-border);
@@ -57,6 +68,8 @@
 }
 
 .task-row ion-checkbox {
+  align-self: flex-start;
+  margin-block-start: 14px;
   margin-inline-end: 12px;
   --size: 18px;
   --border-radius: 4px;
@@ -65,15 +78,211 @@
   --border-color-checked: var(--orbit-accent);
 }
 
-.task-label {
+.task-row-actions-open {
+  --background: color-mix(in srgb, var(--orbit-accent) 7%, var(--orbit-bg-surface));
+}
+
+.task-row-editing {
+  --background: color-mix(in srgb, var(--orbit-accent) 4%, var(--orbit-bg-surface));
+}
+
+.task-content {
+  flex: 1;
+  align-self: flex-start;
+  min-width: 0;
+}
+
+.task-controls {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 0;
+  inset-inline-end: var(--orbit-space-2);
+  display: flex;
+  align-items: center;
+  width: 44px;
   margin: 0;
 }
 
+.task-actions-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  padding: var(--orbit-space-1);
+  border: 1px solid transparent;
+  border-radius: var(--orbit-radius-sm);
+  background: transparent;
+  color: var(--orbit-text-muted);
+  font: inherit;
+  font-size: var(--orbit-text-xs);
+  cursor: pointer;
+  transition: background-color var(--orbit-motion-fast), color var(--orbit-motion-fast);
+
+  ion-icon {
+    font-size: 20px;
+  }
+
+  &:hover,
+  &.task-actions-toggle-open {
+    background: var(--orbit-bg-surface);
+    color: var(--orbit-accent);
+    border-color: var(--orbit-card-border);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--orbit-accent);
+    outline-offset: 2px;
+  }
+}
+
+.task-actions-reveal {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 48px;
+  width: max-content;
+  opacity: 0;
+  transform: translateX(8px) scale(0.96);
+  transform-origin: right center;
+  pointer-events: none;
+  transition: opacity var(--orbit-motion-standard),
+    transform var(--orbit-motion-standard);
+
+  &.task-actions-reveal-open {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    pointer-events: auto;
+  }
+}
+
+.task-actions-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-actions-reveal {
+    transition: none;
+    transform: none;
+  }
+}
+
+.task-actions {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--orbit-space-1);
+  padding-inline: 2px;
+  border: 1px solid var(--orbit-card-border);
+  border-radius: var(--orbit-radius-sm);
+  background: var(--orbit-bg-surface);
+}
+
+.task-action-button {
+  width: 44px;
+  min-width: 44px;
+  min-height: 44px;
+  margin: 0;
+  font-size: var(--orbit-text-xs);
+  font-weight: 500;
+  text-transform: none;
+  --color: var(--orbit-accent);
+  --border-radius: var(--orbit-radius-sm);
+  --padding-start: var(--orbit-space-2);
+  --padding-end: var(--orbit-space-2);
+
+  &::part(native):focus-visible {
+    outline: 2px solid var(--orbit-accent);
+    outline-offset: -2px;
+  }
+
+  ion-icon {
+    font-size: 20px;
+  }
+}
+
+.task-action-delete {
+  margin-inline-start: var(--orbit-space-1);
+  border-inline-start: 1px solid var(--orbit-divider);
+  --color: var(--orbit-danger);
+}
+
+.task-reorder-control {
+  display: flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--orbit-text-muted);
+  font-size: var(--orbit-text-sm);
+
+  ion-reorder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    min-height: 44px;
+    border-radius: var(--orbit-radius-sm);
+    font-size: var(--orbit-text-xs);
+    cursor: grab;
+
+    &:hover {
+      background: var(--orbit-bg-surface);
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+
+    ion-icon {
+      font-size: 20px;
+    }
+  }
+}
+
+.task-label {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--orbit-space-1);
+  min-width: 0;
+  margin: 0;
+  padding-block: var(--orbit-space-3);
+}
+
 .task-title {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  padding-inline-end: 48px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--orbit-text-main);
+  font-family: inherit;
   font-size: var(--orbit-text-md);
   font-weight: 500;
   line-height: 1.4;
+
+  &:focus-visible {
+    outline: 2px solid var(--orbit-accent);
+    outline-offset: 2px;
+  }
+}
+
+.task-row-actions-open .task-title {
+  padding-inline-end: min(204px, 75%);
+}
+
+.task-field-error {
+  color: var(--orbit-danger);
+  font-size: var(--orbit-text-xs);
 }
 
 .task-title.task-completed {
@@ -81,6 +290,44 @@
   text-decoration: line-through;
   text-decoration-thickness: 1px;
   text-decoration-color: var(--orbit-text-muted);
+}
+
+.task-description {
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 48px;
+  margin: 0;
+  padding: var(--orbit-space-1) var(--orbit-space-2);
+  border: 1px solid color-mix(in srgb, var(--orbit-accent) 35%, transparent);
+  border-radius: var(--orbit-radius-sm);
+  background: transparent;
+  color: var(--orbit-text-main);
+  font-family: inherit;
+  font-size: var(--orbit-text-sm);
+  line-height: var(--orbit-line-body);
+  resize: vertical;
+  transition: border-color var(--orbit-motion-fast), background-color var(--orbit-motion-fast);
+
+  &::placeholder {
+    color: var(--orbit-text-muted);
+    opacity: 1;
+  }
+
+  &:hover {
+    border-color: color-mix(in srgb, var(--orbit-accent) 55%, transparent);
+  }
+
+  &:focus-visible {
+    border-color: var(--orbit-accent);
+    outline: 2px solid var(--orbit-accent);
+    outline-offset: 2px;
+    background: var(--orbit-bg-surface-variant);
+  }
+
+  &.task-completed {
+    color: var(--orbit-text-muted);
+  }
 }
 
 .empty-state {
