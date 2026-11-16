@@ -6,9 +6,10 @@ import { TasksActions } from '../../store/tasks/tasks.actions';
 describe('StudyTaskComponent', () => {
 
     let fixture: ComponentFixture<StudyTaskComponent>;
-    
+
     beforeEach(async () => {
-        await TestBed.configureTestingModule({ 
+        await TestBed.configureTestingModule({
+            teardown: { destroyAfterEach: true },
             imports: [StudyTaskComponent],
             providers: [
                 provideMockStore({
@@ -30,6 +31,7 @@ describe('StudyTaskComponent', () => {
             ]
         }).compileComponents();
 
+
         fixture = TestBed.createComponent(StudyTaskComponent);
         fixture.componentRef.setInput('topicID', 'topic-1');
         fixture.detectChanges();
@@ -45,29 +47,39 @@ describe('StudyTaskComponent', () => {
         expect(fixture.nativeElement.querySelector('ion-checkbox').checked).toBeTrue();
     });
 
-    it('starts editing at the title and closes the action controls', () => {
+    it('starts editing at the title and closes the action controls', async() => {
+        const title = fixture.nativeElement.querySelector('.task-title');
+
         fixture.nativeElement.querySelector('.task-actions-toggle').click();
         fixture.detectChanges();
         fixture.nativeElement.querySelector('[title="Editar tarefa"]').click();
         fixture.detectChanges();
+        await fixture.whenStable();
+        fixture.detectChanges();
 
-        expect(document.activeElement).toBe(fixture.nativeElement.querySelector('.task-title'));
+        expect(fixture.componentInstance.editingTaskId).toBe('task-1');
+        expect(title.value).toBe('Estudar Angular');
+
         expect(fixture.nativeElement.querySelector('.task-actions-toggle').getAttribute('aria-expanded')).toBe('false');
     });
 
-    it('keeps changes as a draft between fields and updates both fields once on leaving', () => {
+    it('keeps changes as a draft between fields and updates both fields once on leaving', async () => {
         const dispatch = spyOn(TestBed.inject(MockStore), 'dispatch');
         const title: HTMLInputElement = fixture.nativeElement.querySelector('.task-title');
         const description: HTMLTextAreaElement = fixture.nativeElement.querySelector('.task-description');
         title.focus();
+        title.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
         title.value = '  Angular e RxJS  ';
         title.dispatchEvent(new Event('input', { bubbles: true }));
         description.focus();
+        description.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
         expect(dispatch).not.toHaveBeenCalled();
 
         description.value = 'Praticar effects';
         description.dispatchEvent(new Event('input', { bubbles: true }));
-        description.blur();
+        description.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+        fixture.detectChanges();
+        await fixture.whenStable();
         fixture.detectChanges();
 
         expect(dispatch).toHaveBeenCalledOnceWith(TasksActions.updateTask({ task: {
@@ -85,13 +97,16 @@ describe('StudyTaskComponent', () => {
         expect(dispatch).not.toHaveBeenCalled();
     });
 
-    it('preserves the draft and shows an error instead of saving a blank title', () => {
+    it('preserves the draft and shows an error instead of saving a blank title', async () => {
         const dispatch = spyOn(TestBed.inject(MockStore), 'dispatch');
         const title: HTMLInputElement = fixture.nativeElement.querySelector('.task-title');
         title.focus();
+        title.dispatchEvent(new FocusEvent('focus', { bubbles: true }));
         title.value = '   ';
         title.dispatchEvent(new Event('input', { bubbles: true }));
-        title.blur();
+        title.dispatchEvent(new FocusEvent('focusout', { bubbles: true, relatedTarget: null }));
+        fixture.detectChanges();
+        await fixture.whenStable();
         fixture.detectChanges();
 
         expect(dispatch).not.toHaveBeenCalled();
