@@ -17,14 +17,23 @@ describe('Task persistence', () => {
     let store: Store;
     let service: jasmine.SpyObj<Topics>;
     let responses: Subject<Topic>[];
+    
     const task = (id: string, position: number): StudyTask => ({
-        id, topicID: 'topic-1', title: id, text: '', completed: false, position
+        id, topicID: 'topic-1', title: id, description: '', completed: false, position
     });
     const existingTask = task('existing', 0);
     const topic: Topic = {
         id: 'topic-1', title: 'TypeScript', category: '', progress: 0,
         completedTasks: 0, totalTasks: 1, lastStudied: '', badgeColor: '',
         tasks: [existingTask]
+    };
+
+    const waitFor = async (condition: () => boolean): Promise<void> => {
+        for (let attempt = 0; attempt < 20 && !condition(); attempt++) {
+            await new Promise<void>(resolve => setTimeout(resolve, 0));
+        }
+
+        expect(condition()).toBeTrue();
     };
 
     beforeEach(() => {
@@ -36,6 +45,7 @@ describe('Task persistence', () => {
             return response;
         });
         TestBed.configureTestingModule({
+            teardown: { destroyAfterEach: true },
             imports: [
                 StoreModule.forRoot({ topics: topicsReducer, tasks: TasksReducers }),
                 EffectsModule.forRoot([TaskEffects])
@@ -56,10 +66,13 @@ describe('Task persistence', () => {
         const second = task('second', 2);
         store.dispatch(TasksActions.addTask({ task: first }));
         store.dispatch(TasksActions.addTask({ task: second }));
+        await waitFor(() => responses.length > 0);
 
         expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
             .toEqual([existingTask, first, second]);
         expect(service.updateTopic.calls.count()).toBe(1);
+
+
         expect(service.updateTopic.calls.argsFor(0))
             .toEqual([topic.id, { tasks: [existingTask, first] }]);
 
@@ -85,6 +98,7 @@ describe('Task persistence', () => {
         const next = task('next', 2);
         store.dispatch(TasksActions.addTask({ task: failed }));
         store.dispatch(TasksActions.addTask({ task: next }));
+        await waitFor(() => responses.length > 0);
         responses[0].error(new Error('Network failure'));
 
         expect(service.updateTopic.calls.argsFor(1))
@@ -106,8 +120,11 @@ describe('Task persistence', () => {
         }));
 
         store.dispatch(TasksActions.deleteTask({ id: deletedTask.id }));
+        await waitFor(() => responses.length > 0);
+        
         expect(service.updateTopic.calls.mostRecent().args)
             .toEqual([topic.id, { tasks: [existingTask] }]);
+  
 
         responses[0].next({ ...topic, tasks: [existingTask] });
         responses[0].complete();
@@ -121,6 +138,8 @@ describe('Task persistence', () => {
 
     it('keeps the task visible when deletion fails and allows a retry', async () => {
         store.dispatch(TasksActions.deleteTask({ id: existingTask.id }));
+        await waitFor(() => responses.length > 0);
+        
         responses[0].error(new Error('Network failure'));
 
         expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
