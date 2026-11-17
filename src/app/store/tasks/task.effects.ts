@@ -1,12 +1,13 @@
 import { inject, Injectable } from "@angular/core";
 import { Actions, createEffect, ofType } from "@ngrx/effects";
-import { catchError, concatMap, of, take } from "rxjs";
+import { catchError, concatMap, debounceTime, of, take } from "rxjs";
 import { Topics } from "src/app/services/topics";
 import { TasksActions } from "./tasks.actions";
 import { Store } from '@ngrx/store';
-import { selectAllTopics, selectTopicById } from "../topics/topics.selectors";
+import { selectTopicById } from "../topics/topics.selectors";
 import { TopicsActions } from "../topics/topics.actions";
 import { selectAllTasks } from "./tasks.selectors";
+import { selectTaskByTopicId } from './tasks.selectors';
 @Injectable()
 export class TaskEffects {
 
@@ -119,6 +120,9 @@ export class TaskEffects {
         )
     );
 
+    /**
+     * Update edited tasks
+     */
     readonly updateTask$ = createEffect(() =>
         this.actions$.pipe(
             ofType(TasksActions.updateTask),
@@ -167,7 +171,50 @@ export class TaskEffects {
                 )
             )
         )
-    )
+    );
+
+    /**
+     * Reposition tasks
+     */
+    readonly reorderTask$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(TasksActions.reorderTask),
+            debounceTime(300),
+            concatMap(({ topicID, previousTasks }) =>
+                this.store.select(selectTopicById(topicID)).pipe(
+                    take(1),
+                    concatMap(topic => {
+                        if (!topic) {
+                            return of(TasksActions.reorderTaskFailure({
+                                topicID,
+                                previousTasks,
+                                error: 'Tópico não encontrado.'
+                            }));
+                        }
+
+                        return this.store.select(selectTaskByTopicId(topicID)).pipe(
+                            take(1),
+                            concatMap(reorderedTasks =>
+                                this.topicsService.updateTopic(topic.id, {
+                                    tasks: reorderedTasks
+                                }).pipe(
+                                    concatMap(updatedTopic => of(
+                                        TopicsActions.updateTopicSuccess({ topic: updatedTopic }),
+                                        TasksActions.reorderTaskSuccess({ topicID })
+                                    )),
+                                    catchError(() => of(TasksActions.reorderTaskFailure({
+                                        topicID,
+                                        previousTasks,
+                                        error: 'Não foi possível atualizar a ordem das tarefas.'
+                                    })))
+                                )
+                            )
+                        );
+                    })
+                )
+            )
+        )
+    );
     
 };
 
