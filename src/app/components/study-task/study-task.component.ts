@@ -194,14 +194,15 @@ export class StudyTaskComponent implements OnChanges {
      * complete() encerra a interação visual do Ionic; não confirma persistência.
      * A ordem ainda não é enviada à API.
      */
-    onReorder(event: CustomEvent): void {
+    onReorder(event: CustomEvent, previousTasks: StudyTask[]): void {
         const { from, to, complete } = event.detail;
 
         this.store.dispatch(
             TasksActions.reorderTask({
                 topicID: this.topicID,
                 fromIndex: from,
-                toIndex: to
+                toIndex: to,
+                previousTasks
             })
         );
 
@@ -217,12 +218,7 @@ export class StudyTaskComponent implements OnChanges {
             return crypto.randomUUID();
         }
 
-        return `
-            task-${Date.now()}-${Math.random()
-                .toString(36)
-                .slice(2, 10)
-            }
-        `;
+        return `task-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
     }
 }
 

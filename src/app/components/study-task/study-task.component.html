@@ -15,7 +15,7 @@
             @if (tasks.length > 0) {
                 <ion-reorder-group
                     [disabled]="false"
-                    (ionItemReorder)="onReorder($event)">
+                    (ionItemReorder)="onReorder($event, tasks)">
                     @for (task of tasks; track task.id) {
                       <div class="task-entry" [class.task-entry-actions-open]="openedTaskActionsId === task.id">
                         <ion-item class="task-row" [class.task-row-actions-open]="openedTaskActionsId === task.id" [class.task-row-editing]="editingTaskId === task.id" lines="none">

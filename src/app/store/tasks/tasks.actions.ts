@@ -15,6 +15,16 @@ export const TasksActions = createActionGroup({
         'Delete Task Success': props<{ id: string }>(),
         'Delete Task Failure': props<{ error: string }>(),
 
+        'Reorder Task Success': props<{
+            topicID: string;
+        }>(),
+
+        'Reorder Task Failure': props<{
+            topicID: string;
+            previousTasks: StudyTask[];
+            error: string;
+        }>(),
+
         'Add Task': props<{ task: StudyTask }>(),
         'Update Task': props<{ task: StudyTask, previousTask: StudyTask }>(),
 
@@ -24,6 +34,7 @@ export const TasksActions = createActionGroup({
             topicID: string;
             fromIndex: number;
             toIndex: number;
+            previousTasks: StudyTask[];
         }>(),
     } 
 })  
