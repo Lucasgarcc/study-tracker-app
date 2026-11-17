@@ -5,13 +5,15 @@ import { TopicsActions } from "../topics/topics.actions";
 
 export interface TasksState {
     tasks: StudyTask[];
-    loading: boolean;
+    loading: boolean;    
+    saving: boolean;
     error: string | null;
 }
 
 export const initialState: TasksState = {
     tasks: [],
     loading: false,
+    saving: false,
     error: null
 };
 
@@ -42,12 +44,15 @@ export const TasksReducers = createReducer(
         error: null
     })),
 
+
+
     /**
      * action update task
      */
     on(TasksActions.updateTask, (state, { task }) => ({
         ...state,
         tasks: state.tasks.map(currentTask => currentTask.id === task.id ? task : currentTask),
+        saving: true,
         error: null
     })),
 
@@ -114,6 +119,19 @@ export const TasksReducers = createReducer(
     on(TasksActions.addTaskSuccess,
         state => ({ ...state, error: null })
     ),
+
+    on(TasksActions.updateTaskSuccess,
+        state => ({ ...state, saving: false,  error: null})
+    ),
+
+    on(TasksActions.updateTaskFailure, (state, { taskId, previousTask , error}) => ({
+        ...state,
+        tasks: state.tasks.map(currentTask =>
+            currentTask.id === taskId ? previousTask : currentTask
+        ),
+        saving: false,
+        error
+    })),
 
     on(TasksActions.deleteTaskSuccess, (state, { id }) => ({
         ...state,

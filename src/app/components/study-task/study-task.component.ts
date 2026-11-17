@@ -169,7 +169,8 @@ export class StudyTaskComponent implements OnChanges {
 
         if (title !== task.title || description !== (task.description ?? '')) {
             this.store.dispatch(TasksActions.updateTask({
-                task: { ...task, title, description }
+                task: { ...task, title, description },
+                previousTask: task
             }));
         }
 
