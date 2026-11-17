@@ -82,10 +82,24 @@ describe('StudyTaskComponent', () => {
         await fixture.whenStable();
         fixture.detectChanges();
 
-        expect(dispatch).toHaveBeenCalledOnceWith(TasksActions.updateTask({ task: {
-            id: 'task-1', topicID: 'topic-1', title: 'Angular e RxJS',
-            description: 'Praticar effects', completed: true, position: 0
-        } }));
+        expect(dispatch).toHaveBeenCalledOnceWith(TasksActions.updateTask({ 
+            task: {
+                id: 'task-1',
+                topicID: 'topic-1',
+                title: 'Angular e RxJS',
+                description: 'Praticar effects',
+                completed: true,
+                position: 0
+            },
+            previousTask: {
+                id: 'task-1',
+                topicID: 'topic-1',
+                title: 'Estudar Angular',
+                description: '',
+                completed: true,
+                position: 0
+            }
+        }));
     });
 
     it('does not dispatch an unchanged edit', () => {

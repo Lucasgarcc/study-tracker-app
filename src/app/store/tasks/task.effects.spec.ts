@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { EffectsModule } from '@ngrx/effects';
-import { Store, StoreModule } from '@ngrx/store';
-import { firstValueFrom, Subject } from 'rxjs';
+import { Action, Store, StoreModule } from '@ngrx/store';
+import { firstValueFrom, ReplaySubject, skip, Subject } from 'rxjs';
 import { Topics } from '../../services/topics';
 import { StudyTask } from '../models/study-task.model';
 import { Topic } from '../models/topic.model';
@@ -13,11 +13,14 @@ import { TasksActions } from './tasks.actions';
 import { TasksReducers } from './tasks.reducer';
 import { selectTaskByTopicId, selectTaskState } from './tasks.selectors';
 
+import { provideMockActions } from '@ngrx/effects/testing';
+import { MockStore, provideMockStore } from '@ngrx/store/testing';
+
 describe('Task persistence', () => {
     let store: Store;
     let service: jasmine.SpyObj<Topics>;
     let responses: Subject<Topic>[];
-    
+
     const task = (id: string, position: number): StudyTask => ({
         id, topicID: 'topic-1', title: id, description: '', completed: false, position
     });
@@ -37,6 +40,9 @@ describe('Task persistence', () => {
     };
 
     beforeEach(() => {
+
+        TestBed.resetTestingModule();
+
         responses = [];
         service = jasmine.createSpyObj<Topics>('Topics', ['updateTopic']);
         service.updateTopic.and.callFake(() => {
@@ -59,6 +65,65 @@ describe('Task persistence', () => {
     it('loads persisted tasks into the list used by the UI', async () => {
         expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
             .toEqual([existingTask]);
+    });
+
+    it('persists an edited task and updates the topic state', async() => {
+
+        const updatedTask = {
+            ...existingTask,
+            title: 'Estudar Angular avançado'
+        };
+
+        const savedTopicPromise = firstValueFrom(
+            store.select(selectTopicById(topic.id)).pipe(skip(1))
+        );
+        store.dispatch(
+            TasksActions.updateTask({ task: updatedTask, previousTask: existingTask })
+        );
+
+        await waitFor(() =>  responses.length > 0);
+        expect(service.updateTopic).toHaveBeenCalledWith(
+            topic.id,
+            {
+                tasks: [updatedTask]
+            }
+        );
+    
+        responses[0].next({
+            ...topic,
+            tasks: [updatedTask]
+        });
+        responses[0].complete();
+
+        const savedTopic = await savedTopicPromise;
+
+        expect(savedTopic?.tasks).toEqual([updatedTask]);
+    });
+
+    it('keeps the error and stops saving when task update fails', async () => {
+        const updatedTask = {
+            ...existingTask,
+            title: 'Estudar Angular avançado'
+        };
+
+        const savedStatePromise = firstValueFrom(
+            store.select(selectTaskState).pipe(skip(2))
+        );
+
+        store.dispatch(TasksActions.updateTask({
+            task: updatedTask, previousTask: existingTask
+        }));
+
+        await waitFor(() => responses.length > 0);
+
+        responses[0].error(new Error('Network failure'));
+
+        const failedState = await savedStatePromise;
+
+        expect(failedState.error).toBe('Não foi possível atualizar a tarefa.');
+        expect(failedState.saving).toBeFalse();
+        expect(failedState.tasks).toEqual([existingTask]);
+
     });
 
     it('shows additions immediately and preserves both rapid additions in the API and topic state', async () => {
@@ -163,5 +228,384 @@ describe('Task persistence', () => {
             .toEqual([]);
         expect((await firstValueFrom(store.select(selectTaskState))).error)
             .toBe('Tópico não encontrado');
+    });
+});
+describe('TaskEffects - updateTask isolated', () => {
+    let actions$: ReplaySubject<Action>;
+    let effects: TaskEffects;
+    let service: jasmine.SpyObj<Topics>;
+    let mockStore: MockStore;
+
+    const isolatedExistingTask: StudyTask = {
+        id: 'existing',
+        topicID: 'topic-1',
+        title: 'existing',
+        description: '',
+        completed: false,
+        position: 0
+    };
+   
+    const isolatedTopic: Topic = {
+        id: 'topic-1',
+        title: 'TypeScript',
+        category: '',
+        progress: 0,
+        completedTasks: 0,
+        totalTasks: 1,
+        lastStudied: '',
+        badgeColor: '',
+        tasks: [isolatedExistingTask]
+    };
+
+    beforeEach(() => {
+        actions$ = new ReplaySubject<Action>(1);
+        service = jasmine.createSpyObj<Topics>('Topics', ['updateTopic']);
+ 
+        TestBed.configureTestingModule({
+            providers: [
+                TaskEffects,
+                provideMockActions(() => actions$),
+                provideMockStore({
+                    initialState: {
+                        topics: {
+                            topics: [isolatedTopic],
+                            loading: false,
+                            error: null
+                        },
+                        tasks: {
+                            tasks: [isolatedExistingTask],
+                            loading: false,
+                            saving: false,
+                            error: null
+                        }
+                    }
+                }),
+                { provide: Topics, useValue: service }
+            ]
+        });
+
+        mockStore = TestBed.inject(MockStore);
+        effects = TestBed.inject(TaskEffects);
+
+    });
+
+    it('emits success actions when the task update is persisted', async () => {
+        const emittedActions: Action[] = [];
+
+        const subscription = effects.updateTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        const updatedTask = {
+            ...isolatedExistingTask,
+            title: 'Estudar Angular avançado'
+        };
+
+        const response = new Subject<Topic>();
+        service.updateTopic.and.returnValue(response);
+
+        actions$.next(
+            TasksActions.updateTask({
+                task: updatedTask,
+                previousTask: isolatedExistingTask
+            })
+        );
+
+        expect(service.updateTopic).toHaveBeenCalledWith(
+            isolatedTopic.id,
+            {
+                tasks: [updatedTask]
+            }
+        );
+
+        response.next({
+            ...isolatedTopic,
+            tasks: [updatedTask]
+        });
+        response.complete();
+
+        expect(emittedActions).toEqual([
+            TopicsActions.updateTopicSuccess({
+                topic: {
+                    ...isolatedTopic,
+                    tasks: [updatedTask]
+                }
+            }),
+            TasksActions.updateTaskSuccess({ task: updatedTask })
+        ]);
+
+        subscription.unsubscribe();
+    });
+
+    it('emits failure action when the task update fails', async () => {
+        const emittedActions: Action[] = [];
+
+        const subscription = effects.updateTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        const updatedTask = {
+            ...isolatedExistingTask,
+            title: 'Estudar Angular avançado'
+        };
+
+        const response = new Subject<Topic>();
+        service.updateTopic.and.returnValue(response);
+
+        actions$.next(
+            TasksActions.updateTask({
+                task: updatedTask,
+                previousTask: isolatedExistingTask
+            })
+        );
+
+        response.error(new Error('Network failure'));
+        expect(emittedActions).toEqual([
+            TasksActions.updateTaskFailure({
+                taskId: updatedTask.id,
+                previousTask: isolatedExistingTask,
+                error: 'Não foi possível atualizar a tarefa.'
+            })
+        ]);
+
+        subscription.unsubscribe();
+    });
+
+    it('loads persisted tasks into the list used by the UI', async () => {
+        expect(await firstValueFrom(
+            mockStore.select(selectTaskByTopicId(isolatedTopic.id))
+        )).toEqual([isolatedExistingTask]);
+    });
+
+    it('emits success actions when a task is added', () => {
+
+        const emittedActions: Action[] = [];
+
+        const subscription = effects.addTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        const newTask: StudyTask = {
+            id: 'new-task',
+            topicID: isolatedTopic.id,
+            title: 'Nova tarefa',
+            description: '',
+            completed: false,
+            position: 1
+        };
+
+        const response = new Subject<Topic>();
+        service.updateTopic.and.returnValue(response);
+
+        actions$.next(
+            TasksActions.addTask({ task: newTask })
+        );
+
+        expect(service.updateTopic).toHaveBeenCalledWith(
+            isolatedTopic.id,
+            {
+                tasks: [isolatedExistingTask, newTask]
+            }
+        );
+
+        const updatedTopic: Topic = {
+            ...isolatedTopic,
+            tasks: [isolatedExistingTask, newTask]
+        };
+
+        response.next(updatedTopic);
+        response.complete();
+
+        expect(emittedActions).toEqual([
+            TopicsActions.updateTopicSuccess({ topic: updatedTopic }),
+            TasksActions.addTaskSuccess({ task: newTask })
+        ]);
+
+        subscription.unsubscribe();
+    });
+
+    it('emits failure when adding a task cannot be persisted', () => {
+        const emittedActions: Action[] = [];
+
+        const subscription = effects.addTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        const newTask: StudyTask = {
+            id: 'new-task',
+            topicID: isolatedTopic.id,
+            title: 'Nova tarefa',
+            description: '',
+            completed: false,
+            position: 1
+        };
+
+        const response = new Subject<Topic>();
+        service.updateTopic.and.returnValue(response);
+
+        actions$.next(
+            TasksActions.addTask({ task: newTask })
+        );
+
+        response.error(new Error('Network failure'));
+
+        expect(emittedActions).toEqual([
+            TasksActions.addTaskFailure({
+                taskId: newTask.id,
+                error: 'Não foi possível salvar a tarefa.'
+            })
+        ]);
+
+        subscription.unsubscribe();
+    });
+
+    it('emits success actions when a task is deleted', () => {
+        const emittedActions: Action[] = [];
+
+        const subscription = effects.deleteTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        const response = new Subject<Topic>();
+        service.updateTopic.and.returnValue(response);
+
+        actions$.next(
+            TasksActions.deleteTask({
+                id: isolatedExistingTask.id
+            })
+        );
+
+        expect(service.updateTopic).toHaveBeenCalledWith(
+            isolatedTopic.id,
+            { tasks: [] }
+        );
+
+        const updatedTopic: Topic = {
+            ...isolatedTopic,
+            tasks: []
+        };
+
+        response.next(updatedTopic);
+        response.complete();
+
+        expect(emittedActions).toEqual([
+            TopicsActions.updateTopicSuccess({ topic: updatedTopic }),
+            TasksActions.deleteTaskSuccess({ id: isolatedExistingTask.id })
+        ]);
+
+        subscription.unsubscribe();
+    });
+
+    it('emits failure when deleting a task cannot be persisted', () => {
+        const emittedActions: Action[] = [];
+
+        const subscription = effects.deleteTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        const response = new Subject<Topic>();
+        service.updateTopic.and.returnValue(response);
+
+        actions$.next(
+            TasksActions.deleteTask({
+                id: isolatedExistingTask.id
+            })
+        );
+
+        response.error(new Error('Network failure'));
+
+        expect(emittedActions).toEqual([
+            TasksActions.deleteTaskFailure({
+                error: 'Não foi possível excluir a tarefa.'
+            })
+        ]);
+
+        subscription.unsubscribe();
+    });
+
+    it('queues rapid additions and uses the latest topic snapshot', async () => {
+        const emittedActions: Action[] = [];
+        const responses: Subject<Topic>[] = [];
+
+        const subscription = effects.addTask$.subscribe(action => {
+            emittedActions.push(action);
+        });
+
+        service.updateTopic.and.callFake(() => {
+            const response = new Subject<Topic>();
+            responses.push(response);
+            return response;
+        });
+
+        const firstTask: StudyTask = {
+            id: 'first-task',
+            topicID: isolatedTopic.id,
+            title: 'Primeira tarefa',
+            description: '',
+            completed: false,
+            position: 1
+        };
+
+        const secondTask: StudyTask = {
+            id: 'second-task',
+            topicID: isolatedTopic.id,
+            title: 'Segunda tarefa',
+            description: '',
+            completed: false,
+            position: 2
+        };
+
+        actions$.next(TasksActions.addTask({ task: firstTask }));
+        actions$.next(TasksActions.addTask({ task: secondTask }));
+
+        await new Promise<void>(resolve => setTimeout(resolve, 0));
+        expect(responses.length).toBe(1);
+
+        const topicAfterFirst = {
+            ...isolatedTopic,
+            tasks: [isolatedExistingTask, firstTask]
+        };
+
+        responses[0].next(topicAfterFirst);
+
+        mockStore.setState({
+            topics: {
+                topics: [topicAfterFirst],
+                loading: false,
+                error: null
+            },
+            tasks: {
+                tasks: [isolatedExistingTask, firstTask, secondTask],
+                loading: false,
+                saving: false,
+                error: null
+            }
+        });
+
+        responses[0].complete();
+
+        await new Promise<void>(resolve => setTimeout(resolve, 0));
+        expect(responses.length).toBe(2);
+        expect(service.updateTopic.calls.argsFor(1)).toEqual([
+            isolatedTopic.id,
+            { tasks: [isolatedExistingTask, firstTask, secondTask] }
+        ]);
+
+        const topicAfterSecond = {
+            ...isolatedTopic,
+            tasks: [isolatedExistingTask, firstTask, secondTask]
+        };
+
+        responses[1].next(topicAfterSecond);
+        responses[1].complete();
+
+        expect(emittedActions).toContain(
+            TasksActions.addTaskSuccess({ task: firstTask })
+        );
+        expect(emittedActions).toContain(
+            TasksActions.addTaskSuccess({ task: secondTask })
+        );
+
+        subscription.unsubscribe();
     });
 });
