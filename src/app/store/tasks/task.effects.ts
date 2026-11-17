@@ -118,5 +118,57 @@ export class TaskEffects {
             ))
         )
     );
-}
+
+    readonly updateTask$ = createEffect(() =>
+        this.actions$.pipe(
+            ofType(TasksActions.updateTask),
+            concatMap(({task, previousTask})=>
+                this.store.select(selectTopicById(task.topicID))
+                .pipe(
+                    take(1),
+
+                    concatMap(topic => {
+
+                        if (!topic) {
+                            return of(
+                                TasksActions.updateTaskFailure({
+                                    taskId: task.id,
+                                    previousTask,
+                                    error: 'Tópico não encontrado.'
+                                })
+                            )
+                        }
+
+                        const updatedTasks = (topic.tasks ?? []).map(
+                            currentTask => currentTask.id === task.id ? task : currentTask
+                        )
+
+                        return this.topicsService.updateTopic(topic.id, 
+                            { tasks: updatedTasks })
+                            .pipe(
+                            concatMap(updatedTopic =>
+                                    
+                                of(TopicsActions.updateTopicSuccess({
+                                    topic: updatedTopic
+                                    }),
+                                    TasksActions.updateTaskSuccess({ task })
+                                ),
+                    
+                            ), catchError(() =>
+                                of(TasksActions.updateTaskFailure({
+                                    taskId: task.id,
+                                    previousTask,
+                                    error: 'Não foi possível atualizar a tarefa.'
+                                }))
+                            )
+                        )
+
+                    })
+                )
+            )
+        )
+    )
+    
+};
+
 
