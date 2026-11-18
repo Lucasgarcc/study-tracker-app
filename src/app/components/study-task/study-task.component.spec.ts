@@ -111,6 +111,35 @@ describe('StudyTaskComponent', () => {
         expect(dispatch).not.toHaveBeenCalled();
     });
 
+    it('dispatches the reorder action with the previous task snapshot', () => {
+        const store = TestBed.inject(MockStore);
+        const dispatch = spyOn(store, 'dispatch');
+        const previousTasks = [{
+            id: 'task-1',
+            topicID: 'topic-1',
+            title: 'Estudar Angular',
+            description: '',
+            completed: true,
+            position: 0
+        }];
+        const complete = jasmine.createSpy('complete');
+
+        fixture.componentInstance.onReorder(
+            { detail: { from: 0, to: 0, complete } } as CustomEvent,
+            previousTasks
+        );
+
+        expect(dispatch).toHaveBeenCalledOnceWith(
+            TasksActions.reorderTask({
+                topicID: 'topic-1',
+                fromIndex: 0,
+                toIndex: 0,
+                previousTasks
+            })
+        );
+        expect(complete).toHaveBeenCalledOnceWith();
+    });
+
     it('preserves the draft and shows an error instead of saving a blank title', async () => {
         const dispatch = spyOn(TestBed.inject(MockStore), 'dispatch');
         const title: HTMLInputElement = fixture.nativeElement.querySelector('.task-title');

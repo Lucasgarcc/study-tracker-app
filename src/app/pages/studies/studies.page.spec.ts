@@ -13,10 +13,13 @@ describe('StudiesPage', () => {
 
   beforeEach(async () => {
     await TestBed.configureTestingModule({
-      imports: [StudiesPage],
-      providers: [provideRouter([]), provideMockStore({
-        selectors: [{ selector: selectAllTopics, value: [topic] }]
-      })]
+        teardown: {
+            destroyAfterEach: true
+        },
+        imports: [StudiesPage],
+        providers: [provideRouter([]), provideMockStore({
+            selectors: [{ selector: selectAllTopics, value: [topic] }]
+        })]
     }).compileComponents();
     fixture = TestBed.createComponent(StudiesPage);
     fixture.detectChanges();

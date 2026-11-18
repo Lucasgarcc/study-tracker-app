@@ -30,9 +30,17 @@ describe('Task persistence', () => {
 
     const waitFor = async (condition: () => boolean): Promise<void> => {
         for (let attempt = 0; attempt < 20 && !condition(); attempt++) {
-            await new Promise<void>(resolve => setTimeout(resolve, 0));
+            await new Promise<void>(resolve => setTimeout(resolve, 50));
         }
         expect(condition()).toBeTrue();
+    };
+
+    const waitForReorderRequest = async (): Promise<void> => {
+        for (let attempt = 0; attempt < 20 && responses.length === 0; attempt++) {
+            await new Promise<void>(resolve => setTimeout(resolve, 50));
+        }
+
+        expect(responses.length).toBeGreaterThan(0);
     };
 
     beforeEach(() => {
@@ -178,4 +186,108 @@ describe('Task persistence', () => {
         expect((await firstValueFrom(store.select(selectTaskState))).error)
             .toBe('Tópico não encontrado');
     });
+
+    it('persists the reordered task list after the debounce window', async () => {
+        const reorderTasks = [
+            { ...existingTask, id: 'task-a', title: 'A', position: 0 },
+            { ...existingTask, id: 'task-b', title: 'B', position: 1 },
+            { ...existingTask, id: 'task-c', title: 'C', position: 2 }
+        ];
+        const reorderTopic = { ...topic, tasks: reorderTasks };
+        const previousTasks = reorderTasks.map(task => ({ ...task }));
+
+        store.dispatch(TopicsActions.loadTopicsSuccess({ topics: [reorderTopic] }));
+        store.dispatch(TasksActions.reorderTask({
+            topicID: topic.id,
+            fromIndex: 0,
+            toIndex: 2,
+            previousTasks
+        }));
+
+        await waitForReorderRequest();
+
+        expect(service.updateTopic).toHaveBeenCalledWith(topic.id, {
+            tasks: [
+                { ...reorderTasks[1], position: 0 },
+                { ...reorderTasks[2], position: 1 },
+                { ...reorderTasks[0], position: 2 }
+            ]
+        });
+
+        responses[0].next({
+            ...reorderTopic,
+            tasks: [
+                { ...reorderTasks[1], position: 0 },
+                { ...reorderTasks[2], position: 1 },
+                { ...reorderTasks[0], position: 2 }
+            ]
+        });
+        responses[0].complete();
+
+        await new Promise<void>(resolve => setTimeout(resolve, 0));
+        const savedState = await firstValueFrom(store.select(selectTaskState));
+        expect(savedState.reorderPending[topic.id]).toBeUndefined();
+        expect(savedState.reorderSnapshots[topic.id]).toBeUndefined();
+    });
+
+    it('restores the previous order when reorder persistence fails', async () => {
+        const reorderTasks = [
+            { ...existingTask, id: 'task-a', title: 'A', position: 0 },
+            { ...existingTask, id: 'task-b', title: 'B', position: 1 }
+        ];
+        const previousTasks = reorderTasks.map(task => ({ ...task }));
+        store.dispatch(TopicsActions.loadTopicsSuccess({
+            topics: [{ ...topic, tasks: reorderTasks }]
+        }));
+
+        store.dispatch(TasksActions.reorderTask({
+            topicID: topic.id,
+            fromIndex: 0,
+            toIndex: 1,
+            previousTasks
+        }));
+
+        await waitForReorderRequest();
+        responses[0].error(new Error('Network failure'));
+        await new Promise<void>(resolve => setTimeout(resolve, 0));
+
+        expect(await firstValueFrom(store.select(selectTaskByTopicId(topic.id))))
+            .toEqual(previousTasks);
+        const failedState = await firstValueFrom(store.select(selectTaskState));
+        expect(failedState.error).toBe('Não foi possível atualizar a ordem das tarefas.');
+        expect(failedState.reorderPending[topic.id]).toBeUndefined();
+        expect(failedState.reorderSnapshots[topic.id]).toBeUndefined();
+    });
+
+    it('persists only once for rapid reorder actions inside the debounce window', async () => {
+        const reorderTasks = [
+            { ...existingTask, id: 'task-a', title: 'A', position: 0 },
+            { ...existingTask, id: 'task-b', title: 'B', position: 1 },
+            { ...existingTask, id: 'task-c', title: 'C', position: 2 }
+        ];
+        const previousTasks = reorderTasks.map(task => ({ ...task }));
+        store.dispatch(TopicsActions.loadTopicsSuccess({
+            topics: [{ ...topic, tasks: reorderTasks }]
+        }));
+
+        store.dispatch(TasksActions.reorderTask({
+            topicID: topic.id,
+            fromIndex: 0,
+            toIndex: 2,
+            previousTasks
+        }));
+        store.dispatch(TasksActions.reorderTask({
+            topicID: topic.id,
+            fromIndex: 2,
+            toIndex: 0,
+            previousTasks
+        }));
+
+        await waitForReorderRequest();
+
+        expect(service.updateTopic).toHaveBeenCalledTimes(1);
+        responses[0].next({ ...topic, tasks: reorderTasks });
+        responses[0].complete();
+    });
+
 });

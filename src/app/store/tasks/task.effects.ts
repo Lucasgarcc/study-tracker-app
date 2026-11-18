@@ -8,6 +8,7 @@ import { selectTopicById } from "../topics/topics.selectors";
 import { TopicsActions } from "../topics/topics.actions";
 import { selectAllTasks } from "./tasks.selectors";
 import { selectTaskByTopicId } from './tasks.selectors';
+
 @Injectable()
 export class TaskEffects {
 
@@ -200,7 +201,10 @@ export class TaskEffects {
                                 }).pipe(
                                     concatMap(updatedTopic => of(
                                         TopicsActions.updateTopicSuccess({ topic: updatedTopic }),
-                                        TasksActions.reorderTaskSuccess({ topicID })
+                                        TasksActions.reorderTaskSuccess({       
+                                            topicID,
+                                            tasks: reorderedTasks
+                                        })
                                     )),
                                     catchError(() => of(TasksActions.reorderTaskFailure({
                                         topicID,
