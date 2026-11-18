@@ -17,6 +17,7 @@ export const TasksActions = createActionGroup({
 
         'Reorder Task Success': props<{
             topicID: string;
+            tasks: StudyTask[];
         }>(),
 
         'Reorder Task Failure': props<{

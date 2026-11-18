@@ -8,13 +8,17 @@ export interface TasksState {
     loading: boolean;    
     saving: boolean;
     error: string | null;
+    reorderSnapshots: Record<string, StudyTask[]>,
+    reorderPending: Record<string, number>,
 }
 
 export const initialState: TasksState = {
     tasks: [],
     loading: false,
     saving: false,
-    error: null
+    error: null,
+    reorderSnapshots: {},
+    reorderPending: {},
 };
 
 export const TasksReducers = createReducer(
@@ -26,12 +30,6 @@ export const TasksReducers = createReducer(
         tasks: topics.reduce<StudyTask[]>((tasks, topic) => [...tasks, ...(topic.tasks ?? [])], []),
         loading: false,
         error: null
-    })),
-
-    on(TasksActions.addTaskFailure, (state, { taskId, error }) => ({
-        ...state,
-        tasks: state.tasks.filter(task => task.id !== taskId),
-        error
     })),
 
     /**
@@ -80,7 +78,7 @@ export const TasksReducers = createReducer(
     /**
      * reorganize task
      */
-    on(TasksActions.reorderTask, (state, { topicID, fromIndex, toIndex }) => {
+    on(TasksActions.reorderTask, (state, { topicID, fromIndex, toIndex, previousTasks }) => {
 
         const topicTasks = state.tasks 
             .filter(task => task.topicID === topicID)
@@ -109,16 +107,74 @@ export const TasksReducers = createReducer(
                     position: newPosition
                 }
             }),
-            error: null
+            error: null,
+            reorderSnapshots: {
+                ...state.reorderSnapshots,
+                [topicID]: state.reorderSnapshots[topicID] ?? previousTasks
+            },
+            reorderPending: {
+                ...state.reorderPending,
+                [topicID]: (state.reorderPending[topicID] ?? 0) + 1
+            }
         };
     }),
-    
+
+    on(TasksActions.reorderTaskFailure, (state, {topicID, previousTasks, error }) => {
+
+        const snapshot =
+            state.reorderSnapshots[topicID] ?? previousTasks;
+
+        const pending = Math.max(
+            (state.reorderPending[topicID] ?? 1) - 1,
+            0
+        );
+
+        const restoredState = {
+            ...state,
+            tasks: [
+                ...state.tasks.filter(task => task.topicID !== topicID),
+                ...snapshot
+            ],
+            error
+        };
+        
+        if (pending > 0) {
+            return {
+                ...restoredState,
+                reorderSnapshots: {
+                    ...state.reorderSnapshots,
+                    [topicID]: snapshot
+                },
+                reorderPending: {
+                    ...state.reorderPending,
+                    [topicID]: pending
+                }
+            };
+        }
+
+        const { [topicID]: _snapshot, ...reorderSnapshots } = state.reorderSnapshots;
+        const { [topicID]: _pending, ...reorderPending } = state.reorderPending
+
+        return {
+            ...restoredState,
+            reorderSnapshots,
+            reorderPending
+        };
+
+    }),
+
     /**
      * Status
      */
     on(TasksActions.addTaskSuccess,
         state => ({ ...state, error: null })
     ),
+
+    on(TasksActions.addTaskFailure, (state, { taskId, error }) => ({
+        ...state,
+        tasks: state.tasks.filter(task => task.id !== taskId),
+        error
+    })),
 
     on(TasksActions.updateTaskSuccess,
         state => ({ ...state, saving: false,  error: null})
@@ -142,6 +198,37 @@ export const TasksReducers = createReducer(
     on(TasksActions.deleteTaskFailure, (state, { error }) => ({
         ...state,
         error
-    }))
+    })),
+
+    on(TasksActions.reorderTaskSuccess, (state, { topicID, tasks }) => {
+        const pending = Math.max((state.reorderPending[topicID] ?? 1) - 1,
+            0
+        );
+
+        if(pending > 0) {
+            return {
+                ...state,
+                error: null,
+                reorderSnapshots: {
+                    ...state.reorderSnapshots,
+                    [topicID]: tasks
+                },
+                reorderPending: {
+                    ...state.reorderPending,
+                    [topicID]: pending
+                }
+            };
+        }
+
+        const { [topicID]: _snapshot, ...reorderSnapshots } = state.reorderSnapshots;
+        const { [topicID]: _pending, ...reorderPending } = state.reorderPending;
+
+        return {
+            ...state,
+            error: null,
+            reorderSnapshots,
+            reorderPending
+        }
+    })
     
 )
